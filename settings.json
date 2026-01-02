@@ -1,7 +1,7 @@
 {
     "path": "/workspaces/tiktok-video-automation/video_audio/",
-    "groc_api_key": "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",
-    "voicerss_api": "5ef9aab6899c43f48c0973bc3daf751b",
+    "groc_api_key": "",
+    "voicerss_api": "",
     "watermark_text": "@kavalier_cc",
     "watermark_position": "bottom_right"
 }
