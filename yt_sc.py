@@ -16,17 +16,43 @@ class Bcolors: # For colored messages
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+AD_KEYWORDS = {
+    'ad', 'advert', 'advertisement', 'sponsor', 'sponsored', 'promo', 'commercial',
+    'official trailer', 'trailer', 'launch', 'campaign', 'chromecast', 'google tv',
+    'shorts', 'short', 'preroll'
+}
+
+
+def _parse_duration_to_seconds(duration_str):
+    if not duration_str:
+        return None
+    parts = duration_str.split(':')
+    try:
+        parts = [int(p) for p in parts]
+    except ValueError:
+        return None
+    seconds = 0
+    for p in parts:
+        seconds = seconds * 60 + p
+    return seconds
+
+
 def _is_ad_result(item):
-    """Filter out ads, live streams, and obvious promo clips."""
+    """Filter out ads, live streams, shorts, promos, and too-short clips."""
     title = (item.get('title') or '').lower()
     link = item.get('link', '')
+    duration_str = item.get('duration')
+    duration_s = _parse_duration_to_seconds(duration_str)
+
     if item.get('type') and item.get('type') != 'video':
         return True
     if item.get('isLive'):
         return True
-    if 'ad' in title or 'sponsor' in title:
+    if any(key in title for key in AD_KEYWORDS):
         return True
     if '/shorts/' in link:
+        return True
+    if duration_s is not None and duration_s < 60:
         return True
     return False
 
@@ -60,9 +86,15 @@ def link_gen(search):
     print(f"{Bcolors.YELLOW}No clean search result found; using fallback background{Bcolors.END}")
     return fb
 
-def Download(search = 'minecraft parkour gameplay no copyright 4k', url = None, resolution = '1080p'):
-    # Prefer provided URL, else find one via search
-    video_url = url if url else link_gen(search)
+def Download(search = 'minecraft parkour gameplay no copyright 4k', url = None, resolution = '1080p', use_curated_first = True):
+    # Prefer provided URL, else pick curated fallback first to avoid ads
+    if url:
+        video_url = url
+    elif use_curated_first and FALLBACK_URLS:
+        video_url = random.choice(FALLBACK_URLS)
+        print(f"{Bcolors.BLUE}Using curated background (no ads){Bcolors.END}")
+    else:
+        video_url = link_gen(search)
 
     ydl_opts = {
         'outtmpl': 'fullyoutube.mp4',
