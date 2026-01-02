@@ -16,21 +16,49 @@ class Bcolors: # For colored messages
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-#search the video and randomly choose it (no bigger than 15m)
+def _is_ad_result(item):
+    """Filter out ads, live streams, and obvious promo clips."""
+    title = (item.get('title') or '').lower()
+    link = item.get('link', '')
+    if item.get('type') and item.get('type') != 'video':
+        return True
+    if item.get('isLive'):
+        return True
+    if 'ad' in title or 'sponsor' in title:
+        return True
+    if '/shorts/' in link:
+        return True
+    return False
+
+
+# search the video and try to avoid sponsored/advert content
 def link_gen(search):
     videosSearch = VideosSearch(search)
-    num = random.randint(0,19)
-    num2 = random.randint(0,19)
-    page = random.choice([0,1,2,3,4,5])
-    for i in range(page):
-        videosSearch.next()
-    x = videosSearch.result()['result']
-    try:
-        link = x[num]['link'] 
-    except:
-        link = x[num2]['link'] 
-    print(f'{Bcolors.GREEN}Youtube video was found{Bcolors.END}')
-    return link
+    pages_checked = 0
+
+    while pages_checked < 6:
+        try:
+            results = videosSearch.result().get('result', [])
+        except Exception:
+            results = []
+
+        filtered = [r for r in results if not _is_ad_result(r) and 'link' in r]
+        if filtered:
+            choice = random.choice(filtered[: min(len(filtered), 10)])
+            print(f'{Bcolors.GREEN}Youtube video was found{Bcolors.END}')
+            return choice['link']
+
+        # Advance to next page and try again
+        try:
+            videosSearch.next()
+        except Exception:
+            break
+        pages_checked += 1
+
+    # If nothing suitable found, fall back to curated list to avoid ads
+    fb = random.choice(FALLBACK_URLS)
+    print(f"{Bcolors.YELLOW}No clean search result found; using fallback background{Bcolors.END}")
+    return fb
 
 def Download(search = 'minecraft parkour gameplay no copyright 4k', url = None, resolution = '1080p'):
     # Prefer provided URL, else find one via search

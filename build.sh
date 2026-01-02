@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 echo "=================================================="
 echo "  TikTok Video Automation - Setup Script"
@@ -21,7 +22,12 @@ sudo apt-get install -y \
     libswscale-dev \
     libswresample-dev \
     imagemagick \
-    nodejs npm
+    nodejs npm \
+    fonts-dejavu-core \
+    fonts-freefont-ttf
+
+# Confirm AAC encoder availability (needed for final audio mux)
+ffmpeg -hide_banner -codecs | grep -m1 "EA.. aac" || echo "Warning: AAC encoder not found"
 
 # Relax ImageMagick policy for moviepy TextClip
 echo -e "\n[2b/4] Adjusting ImageMagick policy..."

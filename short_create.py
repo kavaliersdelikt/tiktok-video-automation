@@ -8,6 +8,7 @@ import base64
 import time as tm
 import json
 import shutil
+import os
 
 os.system('cls')
 banner = '''    
@@ -30,6 +31,20 @@ with open('settings.json', 'r') as f:
     voicerss_api = data['voicerss_api'] # VoiceRSS API key: https://www.voicerss.org/
     watermark_text = data.get('watermark_text', '')
     watermark_position = data.get('watermark_position', 'bottom_right')
+
+def _prompt_api_key(label, current_value, url_hint):
+    """Ask for an API key if missing to avoid blank Bearer headers."""
+    if current_value and current_value.strip():
+        return current_value.strip()
+    print(f"{yut.Bcolors.RED}{label} is missing. Get one at {url_hint}.{yut.Bcolors.END}")
+    entered = input(f"Enter {label} (or press Enter to abort): ").strip()
+    if not entered:
+        print(f"{yut.Bcolors.RED}Cannot continue without {label}.{yut.Bcolors.END}")
+        exit(1)
+    return entered
+
+groc_api_key = _prompt_api_key("Groq API key", groc_api_key, "https://console.groq.com/keys")
+voicerss_api = _prompt_api_key("VoiceRSS API key", voicerss_api, "https://www.voicerss.org/")
 
 # Groq client upfront (used for hook suggestions and story)
 client = Groq(
@@ -283,7 +298,7 @@ def video_create():
     print(f'{yut.Bcolors.BLUE}Video was re-sized{yut.Bcolors.END}')
 
     # Attach the audio to the video
-    mixed = CompositeAudioClip([audio2, audio.set_start(audio2.duration)]) # Sums both audios
+    mixed = CompositeAudioClip([audio2, audio.set_start(audio2.duration)]).set_fps(44100)
     video_with_audio = video_resized.set_audio(mixed)
 
     # Define the text to display, one word at a time
@@ -362,7 +377,15 @@ def video_create():
     size_vid = str(video_with_text.size).replace(', ','x')
     print(f'{yut.Bcolors.CYAN}Video has {size_vid} dimensions{yut.Bcolors.END}')
     # Export the final video
-    video_with_text.write_videofile(f"{path}final_tiktok_video.mp4", fps=24)
+    video_with_text.write_videofile(
+        f"{path}final_tiktok_video.mp4",
+        fps=24,
+        codec="libx264",
+        audio_codec="aac",
+        audio_bitrate="192k",
+        audio=True,
+        audio_fps=44100,
+    )
 
 if __name__ == '__main__':
     if video_mode == '1':  # 2-Part mode - create both videos
